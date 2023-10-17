@@ -78,24 +78,22 @@ flutter:
   fonts:
     - family: SUIT
       fonts:
-        - asset: assets/fonts/SUIT-Thin.otf
+        - asset: asset/font/SUIT-Thin.otf
           weight: 100
-        - asset: assets/fonts/SUIT-ExtraLight.otf
+        - asset: asset/font/SUIT-ExtraLight.otf
           weight: 200
-        - asset: assets/fonts/SUIT-Light.otf
+        - asset: asset/font/SUIT-Light.otf
           weight: 300
-        - asset: assets/fonts/SUIT-Regular.otf
+        - asset: asset/font/SUIT-Regular.otf
           weight: 400
-        - asset: assets/fonts/SUIT-Medium.otf
+        - asset: asset/font/SUIT-Medium.otf
           weight: 500
-        - asset: assets/fonts/SUIT-SemiBold.otf
+        - asset: asset/font/SUIT-SemiBold.otf
           weight: 600
-        - asset: assets/fonts/SUIT-Bold.otf
+        - asset: asset/font/SUIT-Bold.otf
           weight: 700
-        - asset: assets/fonts/SUIT-ExtraBold.otf
+        - asset: asset/font/SUIT-ExtraBold.otf
           weight: 800
-        - asset: assets/fonts/SUIT-Black.otf
-          weight: 900
 
   assets:
     - asset/translation/
