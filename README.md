@@ -2,15 +2,28 @@
 
 Base project
 
-## Getting Started
+## firebase configure
 
-This project is a starting point for a Flutter application.
+```shell
+flutterfire configure \
+--platforms="ios,android" \
+--out=lib/environment/firebase/firebase_options.development.dart \
+--ios-build-config=Debug-development \
+--ios-out=ios/Firebase/development/GoogleService-Info.plist \
+--android-out=android/app/src/development/google-services.json \
+--ios-bundle-id="" \
+--android-package-name="" \
+--overwrite-firebase-options
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```shell
+flutterfire configure \
+--platforms="ios,android" \
+--out=lib/environment/firebase/firebase_options.production.dart \
+--ios-build-config=Debug-production \
+--ios-out=ios/Firebase/production/GoogleService-Info.plist \
+--android-out=android/app/src/production/google-services.json \
+--ios-bundle-id="" \
+--android-package-name="" \
+--overwrite-firebase-options
+```
