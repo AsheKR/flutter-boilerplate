@@ -1,3 +1,4 @@
+import 'package:base/app/theme.dart';
 import 'package:base/util/localization.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,8 @@ class App extends StatelessWidget {
       localeResolutionCallback: (locale, supportedLocales) {
         return _onLocaleResolutionCallback?.call(locale, supportedLocales);
       },
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
     );
   }
 }
