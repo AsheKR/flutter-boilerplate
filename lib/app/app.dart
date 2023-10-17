@@ -1,5 +1,4 @@
 import 'package:base/app/theme.dart';
-import 'package:base/util/localization.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -15,10 +14,6 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      localizationsDelegates: [
-        ...context.localizationDelegates,
-        JiffyLocalizations.delegate,
-      ],
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       localeResolutionCallback: (locale, supportedLocales) {
