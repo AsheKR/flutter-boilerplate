@@ -1,0 +1,196 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+
+platform :android do
+  lane :firebase_development do
+    apk_path = build_flutter(
+      build_type: "apk",
+      environment: "development"
+    )
+
+    additional_description = get_app_distribution_release_notes_additional_description()
+    release_notes = "개발 환경으로 설정된 앱 입니다."
+    if additional_description
+      release_notes += "\n#{additional_description}"
+    end
+
+    app_id = ENV["APP_DISTRIBUTION_DEVELOPMENT_APP_ID"]
+    firebase_app_distribution(
+      app: app_id,
+      android_artifact_path: "../#{apk_path}",
+      release_notes: release_notes,
+      groups: "default",
+      debug: true,
+    )
+  end
+
+  desc "Deploy a new version to the Play Store. production"
+  lane :play_store_production do
+    package_name = ENV["PLAY_STORE_PACKAGE_NAME"]
+
+    aab_path = build_flutter(
+      build_type: "appbundle",
+      environment: "production"
+    )
+
+    upload_to_play_store(
+      package_name: package_name,
+      track: "internal",
+      release_status: 'draft',
+      json_key: "./fastlane/play-store-google-service.json",
+      aab: "../#{aab_path}",
+    )
+  end
+
+  private_lane :get_app_distribution_release_notes_additional_description do
+    git_branch = ENV["CI_BRANCH"]
+    git_sha = ENV["CI_SHA"]
+
+    additional_descriptions = []
+    if git_branch
+      additional_descriptions.append("branch: #{git_branch}")
+    end
+    if git_sha
+      additional_descriptions.append("sha: #{git_sha[0...7]}")
+    end
+
+    additional_description = additional_descriptions.join(', ')
+
+    UI.message("additional_description: #{additional_description}")
+
+    additional_description
+  end
+
+  desc "Get version of pubspec.yaml"
+  lane :get_pubspec_version do |options|
+    require "yaml"
+
+    pubspec_location = options[:pubspec_location] || "../../pubspec.yaml"
+
+    begin
+      pubspec = YAML.load_file(pubspec_location)
+    rescue
+      UI.user_error!("get_pubspec_version action cannot read from #{pubspec_location}.")
+    end
+
+    version = pubspec["version"]
+    has_version_code_pattern = version.include?("+")
+    if has_version_code_pattern
+      version_name, version_code = version.split("+")
+    else
+      version_name = version
+      version_code = ""
+    end
+
+    UI.message("version_name: #{version_name}, version_code: #{version_code}")
+    {
+      "version_name": version_name,
+      "version_code": version_code,
+    }
+  end
+
+  desc "Update version of pubspec.yaml"
+  lane :update_pubspec_version do
+    require "date"
+
+    pubspec_version = get_pubspec_version
+    app_id = ENV["APP_DISTRIBUTION_DEVELOPMENT_APP_ID"]
+    latest_release = firebase_app_distribution_get_latest_release(
+      app: app_id,
+      debug: true,
+    )
+
+    version_name = pubspec_version[:version_name]
+    version_code = latest_release[:buildVersion].to_s
+    previous_version_name = latest_release[:displayVersion]
+    previous_version_code = version_code
+
+    major, minor, patch = version_name.split(".")
+    previous_major, previous_minor, previous_patch = previous_version_name.split(".")
+
+    if major < previous_major || (major == previous_major && minor < previous_minor) || (major == previous_major && minor == previous_minor && patch < previous_patch)
+      UI.user_error!("pubspec_version (#{version_name}) cannot be lower than store_version (#{previous_version_name})")
+    end
+
+
+    today = Date.today.strftime("%y%m%d")
+    if !version_code.start_with?(today)
+      version_code = today + "000"
+    end
+
+    version_code = (version_code.to_i + 1).to_s
+    UI.message("previous_version_name: #{previous_version_name}, previous_version_code: #{previous_version_code}")
+    UI.message("version_name: #{version_name}, version_code: #{version_code}")
+    flutter_set_version(
+      path_to_yaml:"../pubspec.yaml",
+      version_name: version_name,
+      version_code: version_code,
+    )
+  end
+
+  desc "Build flutter"
+  lane :build_flutter do |options|
+    build_type = options[:build_type]
+    environment = options[:environment]
+
+    unless build_type
+      UI.user_error!("build_flutter action 'build_type' parameter is not " \
+      "specified and cannot be inferred from Fastlane context.")
+    end
+
+    unless environment
+      UI.user_error!("build_flutter action 'environment' parameter is not " \
+      "specified and cannot be inferred from Fastlane context.")
+    end
+
+    error_occurred = false
+    unless ENV["IS_CI"]
+      sh("flutter", "clean", error_callback: -> (result) { error_occurred = true })
+    end
+
+    sentry_dsn = ENV["SENTRY_DSN"]
+
+    result = sh(
+      "flutter",
+      "build",
+      build_type,
+      "--release",
+      "--target",
+      "lib/environment/target/main.#{environment}.dart",
+      "--flavor",
+      environment,
+      "--dart-define",
+      "SENTRY_DSN=#{sentry_dsn}",
+      error_callback: -> (result) { error_occurred = true },
+  )
+
+    if error_occurred
+      UI.user_error!("flutter command failed.")
+    end
+
+    file_path = /Built (?<file_path>.*)\(.*B\)\./.match(result)["file_path"]
+    UI.message("file_path: #{file_path}")
+
+    unless file_path
+      UI.user_error!("build_flutter action 'file_path' cannot find from flutter build result")
+    end
+
+    file_path.strip
+  end
+end
+

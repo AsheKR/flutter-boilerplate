@@ -26,22 +26,22 @@ class DataSourceDependency {
     return ConfigDataSource(sharedPreferences: _sharedPreferences);
   }
 
-  Future<DeviceDataSource> getDeviceDataSource() async {
+  Future<DeviceService> getDeviceDataSource() async {
     if (kIsWeb) {
       final webBrowserInfo = await _deviceInfoPlugin.webBrowserInfo;
-      return WebDeviceDataSource(deviceInfo: webBrowserInfo);
+      return WebDeviceService(deviceInfo: webBrowserInfo);
     } else if (Platform.isAndroid) {
       final androidDeviceInfo = await _deviceInfoPlugin.androidInfo;
-      return AndroidDeviceDataSource(deviceInfo: androidDeviceInfo);
+      return AndroidDeviceService(deviceInfo: androidDeviceInfo);
     } else if (Platform.isIOS) {
       final iOSDeviceInfo = await _deviceInfoPlugin.iosInfo;
-      return IOSDeviceDataSource(deviceInfo: iOSDeviceInfo);
+      return IOSDeviceService(deviceInfo: iOSDeviceInfo);
     } else {
-      return UnknownDeviceDataSource();
+      return UnknownDeviceService();
     }
   }
 
-  Future<PackageDataSource> getPackageDataSource() async {
-    return PackageDataSource(packageInfo: _packageInfo);
+  Future<PackageService> getPackageDataSource() async {
+    return PackageService(packageInfo: _packageInfo);
   }
 }

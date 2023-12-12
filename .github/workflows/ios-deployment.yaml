@@ -1,0 +1,75 @@
+name: Deployment iOS
+
+on:
+  workflow_call:
+    inputs:
+      fastlane-command:
+        required: true
+        type: string
+
+env:
+  IS_CI: true
+  FLUTTER_CHANNEL: 'stable'
+  FLUTTER_VERSION: '3.13.8'
+  RUBY_VERSION: '3'
+
+jobs:
+  deploy-fastlane-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: x64
+          cache: true
+
+      - name: Doctor Flutter
+        run: |
+          dart --version
+          flutter --version
+          flutter doctor -v
+
+      - name: Donwload Pubspec.yaml
+        uses: actions/download-artifact@v3
+        with:
+          name: pubspec-${{ github.sha }}
+
+      - uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Setup Firebase Credential
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_BASE64" | base64 --decode > android/firebase-google-service.json
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+
+      - name: Fastlane iOS
+        uses: maierj/fastlane-action@v2.3.0
+        with:
+          subdirectory: 'ios'
+          bundle-install-path: './vendor/bundle'
+          lane: ${{ inputs.fastlane-command }}
+        env:
+          CI_BRANCH: ${{ github.ref_name }}
+          CI_SHA: ${{ github.sha }}
+          GOOGLE_APPLICATION_CREDENTIALS: './firebase-google-service.json'
+          CERTIFICATES_REPOSITORY: ${{ secrets.CERTIFICATES_REPOSITORY }}
+          APP_STORE_API_ISSUER_ID: ${{ secrets.APP_STORE_API_ISSUER_ID }}
+          APP_STORE_API_KEY_ID: ${{ secrets.APP_STORE_API_KEY_ID }}
+          APP_STORE_API_KEY: ${{ secrets.APP_STORE_API_KEY }}
+          FASTLANE_SKIP_UPDATE_CHECK: true
+          FASTLANE_HIDE_CHANGELOG: true

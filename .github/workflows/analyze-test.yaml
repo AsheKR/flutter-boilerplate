@@ -1,0 +1,30 @@
+name: Analyze & Test
+
+on:
+  push:
+
+env:
+  FLUTTER_CHANNEL: 'stable'
+  FLUTTER_VERSION: '3.13.8'
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: x64
+          cache: true
+
+      - name: Analyze
+        run: flutter analyze
+      - name: Format
+        run: dart format --set-exit-if-changed .
+      - name: Test
+        run: flutter test --dart-define environment=development

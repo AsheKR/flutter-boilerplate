@@ -1,0 +1,99 @@
+name: Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        required: true
+        type: boolean
+
+env:
+  IS_CI: true
+  FLUTTER_CHANNEL: 'stable'
+  FLUTTER_VERSION: '3.13.8'
+  RUBY_VERSION: '3'
+
+concurrency:
+  group: deployment
+
+jobs:
+  update-pubspec-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: android
+
+      - name: Setup Firebase Credential
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_BASE64" | base64 --decode > android/firebase-google-service.json
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BASE64 }}
+
+      - name: Fastlane Update Build Number
+        uses: maierj/fastlane-action@v2.3.0
+        with:
+          subdirectory: 'android'
+          bundle-install-path: './vendor/bundle'
+          lane: 'update_pubspec_version'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: './firebase-google-service.json'
+          FASTLANE_SKIP_UPDATE_CHECK: true
+          FASTLANE_HIDE_CHANGELOG: true
+
+      - name: Upload Pubspec.yaml
+        uses: actions/upload-artifact@v3
+        with:
+          name: pubspec-${{ github.sha }}
+          path: pubspec.yaml
+          if-no-files-found: error
+
+  deploy-firebase-android-development:
+    needs: [ update-pubspec-version ]
+    uses: ./.github/workflows/android-deployment.yaml
+    with:
+      fastlane-command: firebase_development
+    secrets: inherit
+
+  deploy-firebase-android-staging:
+    needs: [ update-pubspec-version ]
+    uses: ./.github/workflows/android-deployment.yaml
+    with:
+      fastlane-command: firebase_staging
+    secrets: inherit
+
+  deploy-firebase-ios-development:
+    needs: [ update-pubspec-version ]
+    uses: ./.github/workflows/ios-deployment.yaml
+    with:
+      fastlane-command: firebase_development
+    secrets: inherit
+
+  deploy-firebase-ios-staging:
+    needs: [ update-pubspec-version ]
+    uses: ./.github/workflows/ios-deployment.yaml
+    with:
+      fastlane-command: firebase_staging
+    secrets: inherit
+
+  deploy-play-store-andoird:
+    needs: [ update-pubspec-version ]
+    if: ${{ github.event.inputs.release == 'true' }}
+    uses: ./.github/workflows/android-deployment.yaml
+    with:
+      fastlane-command: play_store_production
+    secrets: inherit
+
+  deploy-test-flight-ios:
+    needs: [ update-pubspec-version ]
+    if: ${{ github.event.inputs.release == 'true' }}
+    uses: ./.github/workflows/ios-deployment.yaml
+    with:
+      fastlane-command: test_flight_production
+    secrets: inherit

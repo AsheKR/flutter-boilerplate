@@ -1,6 +1,6 @@
 import 'package:device_info_plus/device_info_plus.dart';
 
-abstract interface class DeviceDataSource {
+abstract interface class DeviceService {
   Future<String> getManufacturer();
   Future<String> getModel();
   Future<String> getOSName();
@@ -8,8 +8,8 @@ abstract interface class DeviceDataSource {
 }
 
 
-class AndroidDeviceDataSource extends DeviceDataSource {
-  AndroidDeviceDataSource({
+class AndroidDeviceService extends DeviceService {
+  AndroidDeviceService({
     required AndroidDeviceInfo deviceInfo,
   })  : _deviceInfo = deviceInfo;
 
@@ -37,8 +37,8 @@ class AndroidDeviceDataSource extends DeviceDataSource {
 }
 
 
-class IOSDeviceDataSource extends DeviceDataSource {
-  IOSDeviceDataSource({
+class IOSDeviceService extends DeviceService {
+  IOSDeviceService({
     required IosDeviceInfo deviceInfo,
   })  : _deviceInfo = deviceInfo;
 
@@ -70,8 +70,8 @@ class IOSDeviceDataSource extends DeviceDataSource {
 }
 
 
-class WebDeviceDataSource extends DeviceDataSource {
-  WebDeviceDataSource({
+class WebDeviceService extends DeviceService {
+  WebDeviceService({
     required WebBrowserInfo deviceInfo,
   })  : _deviceInfo = deviceInfo;
 
@@ -99,7 +99,7 @@ class WebDeviceDataSource extends DeviceDataSource {
 }
 
 
-class UnknownDeviceDataSource extends DeviceDataSource {
+class UnknownDeviceService extends DeviceService {
   @override
   Future<String> getManufacturer() async {
     return 'Unknown';

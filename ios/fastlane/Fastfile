@@ -1,0 +1,126 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  lane :firebase_development do
+    ipa_path = build_flutter(
+      environment: "development"
+    )
+
+    additional_description = get_app_distribution_release_notes_additional_description()
+    release_notes = "개발 환경으로 설정된 앱 입니다."
+    if additional_description
+      release_notes += "\n#{additional_description}"
+    end
+
+    app_id = ENV["APP_DISTRIBUTION_DEVELOPMENT_APP_ID"]
+    firebase_app_distribution(
+      app: app_id,
+      ipa_path: "#{ipa_path}/#{ipa_file_name}",
+      release_notes: release_notes,
+      groups: "default",
+      debug: true,
+    )
+  end
+
+  desc "Deploy a new version to the Play Store. production"
+  lane :test_flight_production do
+    ipa_path = build_flutter(
+      environment: "production"
+    )
+
+    api_key = app_store_connect_api_key(
+      issuer_id: ENV["APP_STORE_API_ISSUER_ID"],
+      key_id: ENV["APP_STORE_API_KEY_ID"],
+      key_content: ENV["APP_STORE_API_KEY"],
+      is_key_content_base64: true,
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "#{ipa_path}/#{ipa_file_name}",
+    )
+  end
+
+  private_lane :get_app_distribution_release_notes_additional_description do
+    git_branch = ENV["CI_BRANCH"]
+    git_sha = ENV["CI_SHA"]
+
+    additional_descriptions = []
+    if git_branch
+      additional_descriptions.append("branch: #{git_branch}")
+    end
+    if git_sha
+      additional_descriptions.append("sha: #{git_sha[0...7]}")
+    end
+
+    additional_description = additional_descriptions.join(', ')
+
+    UI.message("additional_description: #{additional_description}")
+
+    additional_description
+  end
+
+  desc "Build flutter"
+  lane :build_flutter do |options|
+    environment = options[:environment]
+
+    unless environment
+      UI.user_error!("build_flutter action 'environment' parameter is not " \
+      "specified and cannot be inferred from Fastlane context.")
+    end
+
+    sentry_dsn = ENV["SENTRY_DSN"]
+
+    result = ""
+    error_occurred = false
+    Dir.chdir("../..") do
+      unless ENV["IS_CI"]
+        sh("flutter", "clean", error_callback: -> (result) { error_occurred = true })
+      end
+
+      result = sh(
+        "flutter",
+        "build",
+        "ipa",
+        "--release",
+        "--target",
+        "lib/environment/target/main.#{environment}.dart",
+        "--flavor",
+        environment,
+        "--dart-define",
+        "SENTRY_DSN=#{sentry_dsn}",
+        "--export-options-plist",
+        "ios/Runner/exportOptions.#{environment}.plist",
+        error_callback: -> (result) { error_occurred = true },
+      )
+    end
+
+    if error_occurred
+      UI.user_error!("flutter command failed.")
+    end
+
+    file_path = /Built IPA to (?<file_path>.*)\./.match(result)["file_path"]
+    UI.message("file_path: #{file_path}")
+
+    unless file_path
+      UI.user_error!("build_flutter action 'file_path' cannot find from flutter build result")
+    end
+
+    file_path.strip
+  end
+end

@@ -1,7 +1,7 @@
 import 'package:package_info_plus/package_info_plus.dart';
 
-class PackageDataSource {
-  PackageDataSource({
+class PackageService {
+  PackageService({
     required PackageInfo packageInfo,
   }) : _packageInfo = packageInfo;
 
